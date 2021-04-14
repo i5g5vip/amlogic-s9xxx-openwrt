@@ -124,10 +124,7 @@ extract_armbian() {
     tar -xJf "${armbian_path}/boot-common.tar.xz" -C ${boot}
     tar -xJf "${armbian_path}/firmware.tar.xz" -C ${root}
 
-    if  [ -f "${kernel_dir}/kernel.tar.xz" ]; then
-        tar -xJf "${kernel_dir}/kernel.tar.xz" -C ${boot}
-        tar -xJf "${kernel_dir}/modules.tar.xz" -C ${root}
-    elif [ -f ${kernel_dir}/boot-*.tar.gz -a -f ${kernel_dir}/dtb-amlogic-*.tar.gz -a -f ${kernel_dir}/modules-*.tar.gz ]; then
+    if [[ -f ${kernel_dir}/boot-*.tar.gz && -f ${kernel_dir}/dtb-amlogic-*.tar.gz && -f ${kernel_dir}/modules-*.tar.gz ]]; then
         mkdir -p ${boot}/dtb/amlogic ${root}/lib/modules
         tar -xzf ${kernel_dir}/dtb-amlogic-*.tar.gz -C ${boot}/dtb/amlogic
 
@@ -405,7 +402,7 @@ get_kernels() {
         work=$(pwd)
         cd ${kernel_root}
         for x in $(ls ./); do
-            [[ -f "${x}/kernel.tar.xz" && -f "${x}/modules.tar.xz" ]] && kernels[i++]=${x}
+            [[ -f ${x}/boot-*.tar.gz && -f ${x}/dtb-amlogic-*.tar.gz && -f ${x}/modules-*.tar.gz ]] && kernels[i++]=${x}
         done
         cd ${work}
     }

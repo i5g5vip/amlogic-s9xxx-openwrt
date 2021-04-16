@@ -27,7 +27,7 @@ BOOT_MB=256
 ROOT_MB=1024
 
 tag() {
-    echo -e " [ \033[1;36m ${1} \033[0m ]"
+    echo -e " [ \033[1;32m ${1} \033[0m ]"
 }
 
 process() {
@@ -244,8 +244,8 @@ utils() {
     sed -i "s/option label 'ROOTFS'/option uuid '${ROOTFS_UUID}'/" etc/config/fstab 2>/dev/null
 
     # Add drivers
-    [ -f etc/modules.d/rtl8189fs ] || echo "8189fs" > etc/modules.d/rtl8189fs
-    [ -f etc/modules.d/rtl8188fu ] || echo "rtl8188fu" > etc/modules.d/rtl8188fu
+    [ -f etc/modules.d/8189fs ] || echo "8189fs" > etc/modules.d/8189fs
+    [ -f etc/modules.d/8188fu ] || echo "8188fu" > etc/modules.d/8188fu
     [ -f etc/modules.d/usb-net-rtl8150 ] || echo "rtl8150" > etc/modules.d/usb-net-rtl8150
     [ -f etc/modules.d/usb-net-rtl8152 ] || echo "r8152" > etc/modules.d/usb-net-rtl8152
     [ -f etc/modules.d/usb-net-asix-ax88179 ] || echo "ax88179_178a" > etc/modules.d/usb-net-asix-ax88179
@@ -467,7 +467,6 @@ choose_build() {
         let i++
     done
     echo && read -p " Please select the Amlogic SoC: " pause
-    #read  pause
     case  $pause in
           s905x3 | 1) build="s905x3" ;;
           s905x2 | 2) build="s905x2" ;;
@@ -507,7 +506,7 @@ Usage:
 Options:
     -c, --clean            clean up the output and temporary directories
 
-    -d, --default          the kernel version is "all", and the rootfs partition size is "1024m"
+    -d, --default          the kernel version is "latest", and the rootfs partition size is "1024m"
 
     -b, --build=BUILD      Specify multiple cores, use "_" to connect
        , -b all            Compile all types of openwrt
@@ -529,7 +528,6 @@ Options:
 EOF
 }
 
-##
 [ $(id -u) = 0 ] || die "please run this script as root: [ sudo ./make ]"
 echo -e "Welcome to use the OpenWrt packaging tool!\n"
 echo -e "\n $(df -hT) \n"
@@ -551,7 +549,7 @@ while [ "${1}" ]; do
     -d | --default)
         : ${rootsize:=${ROOT_MB}}
         : ${firmware:="${firmwares[0]}"}
-        : ${kernel:="all"}
+        : ${kernel:="${kernels[-1]}"}
         : ${build:="all"}
         ;;
     -b | --build)
@@ -627,8 +625,8 @@ fi
 [ ${build} ] || choose_build
 [ ${rootsize} ] || set_rootsize
 
-[ ${kernel} != "all" ] && unset kernels && kernels=("${kernel}")
-[ ${build} != "all" ] && unset build_openwrt && build_openwrt=("${build}")
+[ ${kernel} != "all" ] && unset kernels && kernels=(${kernel})
+[ ${build} != "all" ] && unset build_openwrt && build_openwrt=(${build})
 
 extract_openwrt
 

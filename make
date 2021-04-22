@@ -402,7 +402,7 @@ get_kernels() {
         work=$(pwd)
         cd ${kernel_root}
         for x in $(ls ./); do
-            [ "$( ls ${x}/*.tar.gz -l 2>/dev/null | grep "^-" | wc -l )" -eq "3" ] && kernels[i++]=${x}
+            [ "$( ls ${x}/*.tar.gz -l 2>/dev/null | grep "^-" | wc -l )" -ge "3" ] && kernels[i++]=${x}
         done
         cd ${work}
     }
@@ -529,8 +529,8 @@ EOF
 }
 
 [ $(id -u) = 0 ] || die "please run this script as root: [ sudo ./make ]"
-echo -e "Welcome to use the OpenWrt packaging tool!\n"
-echo -e "\n $(df -hT) \n"
+echo -e "Welcome to use the OpenWrt packaging tool! \n"
+echo -e "Server space usage before starting to compile: \n$(df -hT ${PWD}) \n"
 
 cleanup
 get_firmwares
@@ -648,7 +648,7 @@ for b in ${build_openwrt[*]}; do
 done
 
 wait
-echo -e "\n $(df -hT) \n"
+echo -e "Server space usage after compilation: \n$(df -hT ${PWD}) \n"
 
 cleanup
 chmod -R 777 ${out_path}

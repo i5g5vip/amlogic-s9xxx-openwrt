@@ -2,7 +2,7 @@
 
 View Chinese description  |  [查看中文说明](README.cn.md)
 
-Support `github.com One-stop compilation`, `github.com clone packaging`, `Use github.com Releases rootfs file to packaging`, `Local packaging`. including OpenWrt firmware install to EMMC and update related functions. Support Amlogic S9xxx STB are ***`S905x3, S905x2, S922x, S905x, S905d, s912`***, etc. such as ***`Phicomm-N1, Octopus-Planet, X96-Max+, HK1-Box, H96-Max-X3, Belink GT-King, Belink GT-King Pro, UGOOS AM6 Plus, Fiberhome HG680P, ZTE B860H`***, etc.
+Support `github.com One-stop compilation`, `Use GitHub Action to packaging`, `Use github.com Releases rootfs file to packaging`, `Local packaging`. including OpenWrt firmware install to EMMC and update related functions. Support Amlogic S9xxx STB are ***`S905x3, S905x2, S922x, S905x, S905d, s912`***, etc. such as ***`Phicomm-N1, Octopus-Planet, X96-Max+, HK1-Box, H96-Max-X3, Belink GT-King, Belink GT-King Pro, UGOOS AM6 Plus, Fiberhome HG680P, ZTE B860H`***, etc.
 
 The latest version of the OpenWrt firmware can be downloaded in [Releases](https://github.com/ophub/amlogic-s9xxx-openwrt/releases). Some important update instructions can be found in [ChangeLog.md](https://github.com/ophub/amlogic-s9xxx-openwrt/blob/main/ChangeLog.md) documents.
 
@@ -16,7 +16,7 @@ This OpenWrt firmware is packaged using ***`Flippy's`*** [Amlogic S9xxx Kernel](
 | s905x2 | [x96max4g](https://tokopedia.link/HcfLaRzjqeb), [x96max2g](https://tokopedia.link/ro207Hsjqeb) | openwrt_s905x2_v*.img |
 | s905x | [hg680p](https://tokopedia.link/NWF1Skg21db), [b860h](https://tokopedia.link/hnXvHn5uwfb) | openwrt_s905x_v*.img |
 | s922x | [belink](https://tokopedia.link/RAgZmOM41db), [belinkpro](https://tokopedia.link/sfTHlfS41db), [ugoos](https://tokopedia.link/pHGKXuV41db) | openwrt_s922x_v*.img |
-| s912 | octopus | openwrt_s912_v*.img |
+| s912 | [H96Pro+](https://www.gearbest.com/tv-box-mini-pc/pp_503486.html), octopus | openwrt_s912_v*.img |
 | s905d | n1 | openwrt_s905d_v*.img |
 
 ## Install to EMMC and update instructions
@@ -59,29 +59,54 @@ You can modify the configuration file in the `router-config` directory and `.yml
 1. Personalized plug-in configuration in [router-config](https://github.com/ophub/amlogic-s9xxx-openwrt/tree/main/router-config) directory. Workflows configuration in [.yml](https://github.com/ophub/amlogic-s9xxx-openwrt/blob/main/.github/workflows/build-openwrt-lede.yml) file.
 2. Select ***`Build OpenWrt`*** on the [Action](https://github.com/ophub/amlogic-s9xxx-openwrt/actions) page. Click the ***`Run workflow`*** button.
 
-- ### Github.com clone packaging instructions
+```yaml
+- name: Build OpenWrt firmware
+  id: build
+  run: |
+    [ -d openwrt-armvirt ] || mkdir -p openwrt-armvirt
+    cp -f openwrt/bin/targets/*/*/*.tar.gz openwrt-armvirt/ && sync
+    sudo chmod +x make
+    sudo ./make -d -b s905x3_s905x2_s905x_s905d_s922x_s912 -k 5.10.31.TF_5.4.113
+    echo "PACKAGED_OUTPUTPATH=${PWD}/out" >> $GITHUB_ENV
+    echo "PACKAGED_OUTPUTDATE=$(date +"%Y.%m.%d.%H%M")" >> $GITHUB_ENV
+    echo "::set-output name=status::success"
+```
+
+The output variable ${{ env.PACKAGED_OUTPUTPATH }} is the path where the packaged file is located.
+
+- ### Use GitHub Action to packaging instructions
 
 [For more instructions please see: .yml example](https://github.com/ophub/op/blob/main/.github/workflows/build-openwrt-s9xxx.yml)
 
 In your .github/workflows/.yml file, after completing the compilation of Subtarget is ARMv8, add the following online packaging code:
 
 ```yaml
-- name: Build OpenWrt for Amlogic S9xxx STB
-  id: build
-  run: |
-    git clone --depth 1 https://github.com/ophub/amlogic-s9xxx-openwrt.git
-    cd amlogic-s9xxx-openwrt/
-    [ -d openwrt-armvirt ] || mkdir -p openwrt-armvirt
-    cp -f ../openwrt/bin/targets/*/*/*.tar.gz openwrt-armvirt/ && sync
-    sudo rm -rf ../openwrt && sync
-    sudo rm -rf /workdir && sync
-    sudo chmod +x make
-    sudo ./make -d -b s905x3_s905x2_s905x_s905d_s922x_s912 -k 5.9.14_5.4.83
-    cd out/ && sudo gzip *.img
-    cp -f ../openwrt-armvirt/*.tar.gz . && sync
-    echo "FILEPATH=$PWD" >> $GITHUB_ENV
-    echo "::set-output name=status::success"
+- name: Package Armvirt as OpenWrt
+  uses: ophub/amlogic-s9xxx-openwrt@main
+  with:
+    armvirt64_path: openwrt/bin/targets/*/*/*.tar.gz
+    amlogic_openwrt: s905x3_s905x2_s905x_s905d_s922x_s912
+    amlogic_kernel: 5.10.31.TF_5.4.113
+    amlogic_size: 1024
 ```
+
+- GitHub Action Input parameter description
+
+| parameter              | Defaults               | Description                                                   |
+|------------------------|------------------------|---------------------------------------------------------------|
+| armvirt64_path         | no                     | Set the file path of `openwrt-armvirt-64-default-rootfs.tar.gz` , Use the path of the file in the current workflow such as `openwrt/bin/targets/*/*/*.tar.gz` . |
+| amlogic_openwrt        | s905d_s905x3           | Set the `SoC` of the packaging box, the default `all` packs all boxes, you can specify a single box such as `s905x3`, you can choose multiple boxes to use `_` connection such as `s905x3_s905d` . SOC code of each box is: `s905` `s905d` `s905x2` `s905x3` `s912` `s922x` |
+| amlogic_kernel         | 5.4.108_5.10.26.TF     | Set the kernel version，Ophub's [kernel](https://github.com/ophub/amlogic-s9xxx-openwrt/tree/main/amlogic-s9xxx/amlogic-kernel/kernel) library contains many original kernels of `Flippy`, you can view and choose to specify. |
+| amlogic_size           | 1024                   | Set the size of the firmware ROOT partition |
+
+- GitHub Action Output variable description
+
+| parameter                                | For example             | Description                   |
+|------------------------------------------|-------------------------|-------------------------------|
+| ${{ env.PACKAGED_OUTPUTPATH }}           | ${PWD}/out              | OpenWrt firmware storage path |
+| ${{ env.PACKAGED_OUTPUTDATE }}           | 2021.04.21.1058         | Packing date                  |
+| ${{ env.PACKAGED_STATUS }}               | success / failure       | Package status                |
+
 
 - Uploads OpenWrt Firmware to Actions:
  
@@ -89,7 +114,7 @@ In your .github/workflows/.yml file, after completing the compilation of Subtarg
 - name: Upload artifact to Actions
   uses: kittaakos/upload-artifact-as-is@master
   with:
-    path: ${{ env.FILEPATH }}/
+    path: ${{ env.PACKAGED_OUTPUTPATH }}/
 ```
 
 - Uploads OpenWrt Firmware to Release:
@@ -101,7 +126,7 @@ In your .github/workflows/.yml file, after completing the compilation of Subtarg
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
     tag_name: openwrt_s9xxx
-    files: ${{ env.FILEPATH }}/*
+    files: ${{ env.PACKAGED_OUTPUTPATH }}/*
     body: |
       This is OpenWrt firmware for Amlogic S9xxx STB.
       More information ...
@@ -125,10 +150,8 @@ If there is an `openwrt-armvirt-64-default-rootfs.tar.gz` file in a [Releases](h
     [ -s DOWNLOAD_URL ] && wget -q -P openwrt-armvirt https://github.com/${GITHUB_REPOSITORY}/releases/download/$(cat DOWNLOAD_URL)
     sudo chmod +x make
     sudo ./make -d -b s905x3_s905x2_s905x_s905d_s922x_s912 -k 5.9.14_5.4.83
-    cd out/ && sudo gzip *.img
-    cp -f ../openwrt-armvirt/*.tar.gz . && sync
-    echo "FILEPATH=$PWD" >> $GITHUB_ENV
-    echo "FILE_DATE=$(date +"%Y.%m.%d.%H%M")" >> $GITHUB_ENV
+    echo "PACKAGED_OUTPUTPATH=${PWD}/out" >> $GITHUB_ENV
+    echo "PACKAGED_OUTPUTDATE=$(date +"%Y.%m.%d.%H%M")" >> $GITHUB_ENV
     echo "::set-output name=status::success"
 ```
 

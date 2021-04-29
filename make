@@ -54,7 +54,7 @@ cleanup() {
         losetup -d /dev/${x} 2>/dev/null
     done
     losetup -D
-    rm -rf ${tmp_path}
+    rm -rf ${tmp_path} 2>/dev/null
 }
 
 extract_openwrt() {
@@ -147,7 +147,7 @@ extract_armbian() {
     sync
 }
 
-utils() {
+refactor_files() {
     cd ${make_path}
     build_op=${1}
     build_usekernel=${2}
@@ -168,7 +168,7 @@ utils() {
     fi
 
     case "${build_op}" in
-        s905x3 | x96 | hk1 | h96)
+        s905x3 | x96 | hk1 | h96 | ugoosx3)
             FDTFILE="meson-sm1-x96-max-plus-100m.dtb"
             U_BOOT_EXT=1
             UBOOT_OVERLOAD="u-boot-x96maxplus.bin"
@@ -196,7 +196,7 @@ utils() {
             MAINLINE_UBOOT=""
             ANDROID_UBOOT="/lib/u-boot/u-boot-2015-phicomm-n1.bin"
             ;;
-        s912 | octopus)
+        s912 | h96proplus | octopus)
             FDTFILE="meson-gxm-octopus-planet.dtb"
             U_BOOT_EXT=0
             UBOOT_OVERLOAD="u-boot-zyxq.bin"
@@ -215,7 +215,7 @@ utils() {
             ;;
     esac
 
-    #Edit ${root}/* files ========== Begin ==========
+    # Edit ${root}/* files ========== Begin ==========
     cd ${root}
 
     # Add other operations below
@@ -237,11 +237,14 @@ utils() {
     [ -f usr/bin/openwrt-update ] || cp -f ${installfiles_path}/openwrt-update usr/bin/
     [ -f usr/bin/openwrt-kernel ] || cp -f ${kernel_path}/build_kernel/openwrt-kernel usr/bin/
 
-    #Edit fstab
+    # Edit fstab
     ROOTFS_UUID=$(uuidgen)
     #echo "ROOTFS_UUID: ${ROOTFS_UUID}"
     sed -i "s/LABEL=ROOTFS/UUID=${ROOTFS_UUID}/" etc/fstab 2>/dev/null
     sed -i "s/option label 'ROOTFS'/option uuid '${ROOTFS_UUID}'/" etc/config/fstab 2>/dev/null
+    
+    # Turn off speed limit by default
+    [ -f etc/config/nft-qos ] && sed -i 's/option limit_enable.*/option limit_enable 0/g' etc/config/nft-qos
 
     # Add drivers
     [ -f etc/modules.d/8189fs ] || echo "8189fs" > etc/modules.d/8189fs
@@ -291,7 +294,7 @@ utils() {
         cpustat_file=${configfiles_path}/patches/cpustat/cpustat.py
         cpustat_patch=${configfiles_path}/patches/cpustat/luci-admin-status-index-html.patch
         [ -f ${cpustat_file} ] && cp -f ${cpustat_file} usr/bin/cpustat && chmod 755 usr/bin/cpustat >/dev/null 2>&1
-        [ -f ${cpustat_patch} ] && cd usr/lib/lua/luci/view/admin_status && patch -p0 < ${cpustat_patch} >/dev/null 2>&1
+        [ -f ${cpustat_patch} ] && cd usr/lib/lua/luci/view/admin_status && patch -p0 < ${cpustat_patch} >/dev/null 2>&1 && cd ${root}
     fi
 
     sync
@@ -319,7 +322,7 @@ utils() {
     fi
 
     sync
-    #Edit ${boot}/* files ========== End ==========
+    # Edit ${boot}/* files ========== End ==========
 }
 
 make_image() {
@@ -378,6 +381,9 @@ copy2image() {
     umount -f ${bootfs} 2>/dev/null
     umount -f ${rootfs} 2>/dev/null
     losetup -d ${loop} 2>/dev/null
+    sync
+
+    cd ${out_path} && gzip *.img && sync && cd ${make_path}
 }
 
 get_firmwares() {
@@ -628,28 +634,49 @@ fi
 [ ${kernel} != "all" ] && unset kernels && kernels=(${kernel})
 [ ${build} != "all" ] && unset build_openwrt && build_openwrt=(${build})
 
-extract_openwrt
-
+k=1
 for b in ${build_openwrt[*]}; do
+
+    i=1
     for x in ${kernels[*]}; do
         {
+            echo -n "(${k}.${i}) Start packaging OpenWrt [ ${b} - ${x} ]. "
+
+            now_remaining_space=$(df -hT ${PWD} | grep '/dev/' | awk '{print $5}' | sed 's/.$//')
+            if  [[ "${now_remaining_space}" -le "2" ]]; then
+                echo "Remaining space is less than 2G, exit this packaging. \n"
+                break
+            else
+                echo "Remaining space is ${now_remaining_space}G."
+            fi
+            
             kernel=${x}
             build=${b}
-            process " extract armbian files."
+            process " (1/6) extract armvirt files."
+            extract_openwrt
+            process " (2/6) extract armbian files."
             extract_armbian ${b}
-            utils ${b} ${x}
-            process " make openwrt image."
+            process " (3/6) refactor related files."
+            refactor_files ${b} ${x}
+            process " (4/6) make openwrt image."
             make_image ${b}
-            process " copy files to image."
+            process " (5/6) copy files to image."
             copy2image ${b}
-            process " generate success."
-        } &
+            process " (6/6) cleanup tmp files."
+            cleanup
+            
+            echo -e "(${k}.${i}) OpenWrt packaged successfully. \n"
+            
+            let i++
+        }
     done
+    
+    let k++
 done
 
-wait
+cp -f ${openwrt_path}/*.tar.gz ${out_path} 2>/dev/null && sync
 echo -e "Server space usage after compilation: \n$(df -hT ${PWD}) \n"
 
-cleanup
+wait
 chmod -R 777 ${out_path}
 

@@ -8,7 +8,7 @@
 # Copyright (C) 2020 https://github.com/ophub/amlogic-s9xxx-openwrt
 #========================================================================================================================
 
-name: Build OpenWrt lede
+name: OpenWrt lede N1
 
 on:
   repository_dispatch:

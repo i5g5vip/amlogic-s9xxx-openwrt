@@ -4,18 +4,30 @@ View Chinese description  |  [查看中文说明](README.cn.md)
 
 Install and Update openwrt to emmc for Amlogic S9xxx STB.
 
-## Instructions
+## Method of integrating luci-app-amlogic at compile time
 
-1. `svn co https://github.com/ophub/amlogic-s9xxx-openwrt/trunk/amlogic-s9xxx/install-program package/install-program`
-2. Execute make `menuconfig` and select `install-program` under `Utilities`
+1. `svn co https://github.com/ophub/luci-app-amlogic/trunk/luci-app-amlogic package/luci-app-amlogic`
+2. Execute make `menuconfig` and select `luci-app-amlogic` under `LuCI ---> 3. Applications  ---> <*> luci-app-amlogic`
 
-```shell script
-Utilities  --->  
-   <*> install-program
-```
-💡Tips: This installation and update script can be introduced and used separately during github.com online compilation. If the firmware in the `openwrt-armvirt` directory you provided does not integrate this installation and update script, ***`Will auto add`*** this function to you through the `./make` script when packaging.
+For more instructions on the plug-in, see：[https://github.com/ophub/luci-app-amlogic](https://github.com/ophub/luci-app-amlogic)
 
-## Install to Amlogic S9xxx STB EMMC and update instructions
+💡Tips: Scripts such as install/update have been included in `luci-app-amlogic`. When you use the script `./make` of this repository to package, the script will automatically detect whether the `openwrt-armvirt-64-default-rootfs.tar.gz` file in the `openwrt-armvirt` directory contains install/update scripts. If it detects that no related scripts will be added automatically, You can use script commands to perform related operations. The `luci-app-amlogic` plug-in can realize the visual operation of all the functions of the script, which can avoid the need to learn and use complex script commands, and it is recommended to use it in an integrated manner.
+
+## Install to EMMC and update instructions
+
+Choose the corresponding firmware according to your STB. Then write the IMG file to the USB hard disk through software such as [Rufus](https://rufus.ie/) or [balenaEtcher](https://www.balena.io/etcher/). Insert the USB hard disk into the STB. Common for all `Amlogic S9xxx STB`.
+
+- ### Install OpenWrt
+
+Log in to the default IP: 192.168.1.1 → `Login in to openwrt` → `system menu` → `Amlogic Service` → `Install OpenWrt`
+
+- ### Update OpenWrt
+
+Log in to the default IP: 192.168.1.1 →  `Login in to openwrt` → `system menu` → `Amlogic Service` → `Replace OpenWrt Kernel`
+
+## Instructions for using scripts in Amlogic S9xxx
+
+If you don't like the visual install/update operation through Luci described above, and are keen on using script commands, the relevant instructions are as follows:
 
 Choose the corresponding firmware according to your Amlogic S9xxx STB. Then write the IMG file to the USB hard disk through software such as [Rufus](https://rufus.ie/) or [balenaEtcher](https://www.balena.io/etcher/). Insert the USB hard disk into the Amlogic S9xxx STB. Common for all `Amlogic S9xxx STB`.
 
